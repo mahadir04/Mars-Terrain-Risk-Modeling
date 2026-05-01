@@ -1,20 +1,23 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Data and large generated files
+outputs/
+*.npy
+*.pth
+*.png
+
+# Dataset folders (absolute or relative)
+D:/original-image-slices-512x512/
+
+# Environments
 .venv/
 env/
 venv/
 .env
 
-# Data and Outputs (IMPORTANT: These are too large for GitHub)
-outputs/
-D:/original-image-slices-512x512/
-
 # IDEs
 .vscode/
 .idea/
-
-# OS
-.DS_Store
-Thumbs.db

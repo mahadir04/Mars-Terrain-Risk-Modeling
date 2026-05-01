@@ -51,8 +51,8 @@ WEIGHT_SLOPE = 0.4       # w1
 WEIGHT_ROUGHNESS = 0.3   # w2
 WEIGHT_DEPTH = 0.3       # w3
 
-# Gaussian smoothing for pseudo-labels
-PSEUDO_LABEL_SIGMA = 2.0
+# Gaussian smoothing for pseudo-labels (keep small to avoid blurring)
+PSEUDO_LABEL_SIGMA = 0.5
 
 # ─────────────────────────── Model Architecture ────────────────────────────
 # §5  DeepLabV3+ with MobileNetV3-Large
@@ -65,7 +65,7 @@ BATCH_SIZE = 8
 NUM_WORKERS = 4
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 1e-4
-EPOCHS = 7
+EPOCHS = 10
 EARLY_STOPPING_PATIENCE = 7
 
 # Train/Val split
@@ -79,8 +79,8 @@ DICE_SMOOTH = 1.0        # Smoothing factor for Dice loss
 # §6  Fusion weight: H_final = α·H_learned + (1-α)·H_physics
 FUSION_ALPHA = 0.7
 
-# Post-processing Gaussian sigma
-FUSION_SMOOTH_SIGMA = 1.5
+# Post-processing: 0 = disabled (use bilateral filter in fusion.py instead)
+FUSION_SMOOTH_SIGMA = 0
 
 # ─────────────────────────── Visualization ─────────────────────────────────
 RISK_CMAP = "inferno"          # Colormap for risk heatmaps

@@ -273,10 +273,10 @@ def fig_fusion_comparison(tile_path: str = None, save: bool = True) -> plt.Figur
     # Fused
     if h_learned is not None:
         h_fused = FUSION_ALPHA * h_learned + (1 - FUSION_ALPHA) * h_physics
-        h_fused = gaussian_filter(h_fused, sigma=1.5)
+        h_fused = cv2.bilateralFilter(h_fused.astype(np.float32), d=9, sigmaColor=0.05, sigmaSpace=3)
         h_fused = np.clip(h_fused, 0, 1)
     else:
-        h_fused = gaussian_filter(h_physics, sigma=1.5)
+        h_fused = cv2.bilateralFilter(h_physics.astype(np.float32), d=9, sigmaColor=0.05, sigmaSpace=3)
         h_fused = np.clip(h_fused, 0, 1)
 
     fig, axes = plt.subplots(1, 4, figsize=(20, 5.5))
@@ -504,7 +504,7 @@ def fig_multi_tile_strip(n: int = 4, save: bool = True) -> plt.Figure:
         fused_path = FUSED_MAPS_DIR / f"{tile_name}.npy"
         h_fused = (np.load(str(fused_path))
                    if fused_path.exists()
-                   else gaussian_filter(h_physics, 1.5))
+                   else cv2.bilateralFilter(h_physics.astype(np.float32), d=9, sigmaColor=0.05, sigmaSpace=3))
 
         row_data = [image, h_physics, h_fused]
         cmaps = ['gray', MARS_CMAP, MARS_CMAP]

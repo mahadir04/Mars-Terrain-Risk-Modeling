@@ -10,6 +10,7 @@
 =============================================================================
 """
 
+import cv2
 import numpy as np
 import glob
 import torch
@@ -59,9 +60,15 @@ def fuse_heatmaps(
     # Weighted combination
     h_final = alpha * h_learned + (1.0 - alpha) * h_physics
 
-    # Post-processing: Gaussian smoothing
-    if smooth_sigma > 0:
-        h_final = gaussian_filter(h_final, sigma=smooth_sigma)
+    # ── Edge-Preserving Post-Processing ─────────────────────────────────────
+    # Use a bilateral filter instead of Gaussian to keep terrain feature
+    # boundaries (crater rims, rock edges) sharp while smoothing noise.
+    # Parameters:
+    #   d=9          — diameter of each pixel neighbourhood
+    #   sigmaColor=0.05 — how much intensity difference is tolerated (0–1 scale)
+    #   sigmaSpace=3    — spatial extent of smoothing in pixels
+    h_f32 = h_final.astype(np.float32)
+    h_final = cv2.bilateralFilter(h_f32, d=9, sigmaColor=0.05, sigmaSpace=3)
 
     # Clamp to [0, 1]
     h_final = np.clip(h_final, 0.0, 1.0)

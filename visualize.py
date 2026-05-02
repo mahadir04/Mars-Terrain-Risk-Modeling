@@ -547,6 +547,67 @@ def fig_multi_tile_strip(n: int = 4, save: bool = True) -> plt.Figure:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Figure 8 — Graph Nodification Process
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_graph_nodification(tile_path: str = None, save: bool = True) -> Optional[plt.Figure]:
+    """
+    Visualize the Graph Nodification process.
+    Shows the original image, the downsampled nodes, and the reconstructed grid.
+    """
+    try:
+        from graph_utils import GridGraphBuilder
+    except ImportError:
+        print("  ⚠ Cannot generate Graph figure: torch_geometric not installed.")
+        return None
+
+    if tile_path is None:
+        tile_path = _get_sample_tiles(1)[0]
+        
+    image = load_and_preprocess(tile_path)
+    
+    # Use graph builder to get node intensity
+    builder = GridGraphBuilder()
+    
+    # We only need the image to show nodification of intensity (dummy variables for the rest)
+    dummy = np.zeros_like(image)
+    data = builder.build_graph(image, dummy, dummy, dummy)
+    
+    # Node intensity is the 4th feature (index 3)
+    node_intensity = data.x[:, 3].numpy()
+    
+    # Reshape nodes back to N x N grid
+    node_grid = node_intensity.reshape(builder.grid_size, builder.grid_size)
+    
+    # Reconstruct to 512x512
+    reconstructed = builder.graph_to_map(node_intensity)
+    
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5.5))
+    
+    panels = [
+        ('(a) Original Terrain\n(512×512 pixels)', image, 'gray'),
+        (f'(b) Graph Nodes\n({builder.grid_size}×{builder.grid_size} patches = {builder.num_nodes} nodes)', node_grid, 'gray'),
+        (f'(c) Reconstructed View\n(Upsampled back to 512×512)', reconstructed, 'gray'),
+    ]
+    
+    for ax, (title, img_data, cmap) in zip(axes, panels):
+        im = ax.imshow(img_data, cmap=cmap, vmin=0, vmax=1 if data.x.max() <= 1.0 else 255)
+        ax.set_title(title, fontsize=12, color='#e8eaf6', pad=10)
+        ax.axis('off')
+        for spine in ax.spines.values():
+            spine.set_edgecolor('#5c6bc0')
+            
+    fig.suptitle("Stage 2b: GATv2 Terrain Nodification Process", 
+                 fontsize=14, fontweight='bold', color='#7986cb', y=1.03)
+                 
+    plt.tight_layout()
+    if save:
+        p = FIGURES_DIR / "fig8_graph_nodification.png"
+        fig.savefig(p, dpi=FIG_DPI, bbox_inches='tight', facecolor=fig.get_facecolor())
+        print(f"  ✓ Saved: {p.name}")
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Generate ALL figures
 # ─────────────────────────────────────────────────────────────────────────────
 def generate_all_figures():
@@ -579,8 +640,12 @@ def generate_all_figures():
     fig_risk_distribution()
     plt.close('all')
 
-    print("[7/7] Multi-tile fusion strip...")
+    print("[7/8] Multi-tile fusion strip...")
     fig_multi_tile_strip()
+    plt.close('all')
+
+    print("[8/8] Graph Nodification Process...")
+    fig_graph_nodification()
     plt.close('all')
 
     print(f"\n{'='*60}")

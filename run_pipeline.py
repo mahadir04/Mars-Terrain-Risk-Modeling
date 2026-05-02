@@ -21,7 +21,8 @@ from pathlib import Path
 from config import (
     DEVICE, TILE_DIRS, PSEUDO_LABELS_DIR,
     DL_PREDICTIONS_DIR, FUSED_MAPS_DIR, FIGURES_DIR,
-    CHECKPOINTS_DIR, EPOCHS, BATCH_SIZE, FUSION_ALPHA
+    CHECKPOINTS_DIR, EPOCHS, BATCH_SIZE, FUSION_ALPHA,
+    GAT_CHECKPOINTS_DIR, GAT_PREDICTIONS_DIR, GAT_EPOCHS, GAT_BATCH_SIZE
 )
 
 
@@ -31,9 +32,10 @@ def print_banner():
 ║   MARS ROVER TERRAIN RISK MODELING PIPELINE                      ║
 ║   Physics + Deep Learning Hybrid Terrain Risk Estimation         ║
 ╠══════════════════════════════════════════════════════════════════╣
-║   Stage 1 │ Physics Feature Extraction (Slope/Roughness/Depth)   ║
-║   Stage 2 │ DeepLabV3+ MobileNetV3-Large CNN Training           ║
-║   Stage 3 │ Heatmap Fusion  H = α·DL + (1-α)·Physics           ║
+║   Stage 1  │ Physics Feature Extraction (Slope/Roughness/Depth)  ║
+║   Stage 2a │ DeepLabV3+ MobileNetV3-Large CNN Training           ║
+║   Stage 2b │ GATv2 Graph Attention Network Training              ║
+║   Stage 3  │ Heatmap Fusion  H = α·DL + (1-α)·Physics           ║
 ╚══════════════════════════════════════════════════════════════════╝
 """)
 
@@ -76,6 +78,34 @@ def step_2_train(max_tiles: int = None, epochs: int = None,
     from train import train
     t0 = time.time()
     history = train(
+        max_tiles=max_tiles,
+        epochs=epochs,
+        batch_size=batch_size,
+        resume_from=resume
+    )
+    print(f"  Done in {(time.time()-t0)/60:.1f} min")
+    return history
+
+
+def step_2b_train_gat(max_tiles: int = None, epochs: int = None,
+                      batch_size: int = None, skip: bool = False,
+                      resume: str = None):
+    """Step 2b: Train the GATv2 graph attention model."""
+    print("\n" + "─" * 70)
+    print("  STEP 2b: GATv2 Graph Attention Network Training")
+    print("─" * 70)
+
+    if skip:
+        best = GAT_CHECKPOINTS_DIR / "best_gat_model.pth"
+        if best.exists():
+            print(f"  [SKIP] Found GAT checkpoint: {best}")
+        else:
+            print("  [SKIP] No GAT checkpoint found — skipping GATv2 training")
+        return
+
+    from train_gat import train_gat
+    t0 = time.time()
+    history = train_gat(
         max_tiles=max_tiles,
         epochs=epochs,
         batch_size=batch_size,
@@ -152,6 +182,7 @@ def step_6_report():
     n_figs = len(glob.glob(str(FIGURES_DIR / "*.png")))
 
     has_model = (CHECKPOINTS_DIR / "best_model.pth").exists()
+    has_gat_model = (GAT_CHECKPOINTS_DIR / "best_gat_model.pth").exists()
 
     # Compute risk statistics on fused maps
     fused_files = glob.glob(str(FUSED_MAPS_DIR / "*.npy"))[:200]
@@ -171,9 +202,11 @@ def step_6_report():
     DL predictions:             {n_preds:>8,}
     Fused maps:                 {n_fused:>8,}
 
-  Model
-    Trained checkpoint:         {'✓ Found' if has_model else '✗ Not found'}
-    Architecture:               MobileNetV3-Large + DeepLabV3+
+  Models
+    CNN checkpoint:             {'✓ Found' if has_model else '✗ Not found'}
+    Architecture (CNN):         MobileNetV3-Large + DeepLabV3+
+    GAT checkpoint:             {'✓ Found' if has_gat_model else '✗ Not found'}
+    Architecture (GAT):         GATv2Conv × 3 layers, 4 heads
 
   Risk Statistics  (from {len(fused_files)} tiles)
     Mean risk H_final:          {risk_mean:>8.4f}
@@ -224,11 +257,17 @@ Examples:
     parser.add_argument('--skip-labels', action='store_true',
                         help="Skip pseudo-label generation if already done")
     parser.add_argument('--skip-train', action='store_true',
-                        help="Skip training (use existing checkpoint)")
+                        help="Skip CNN training (use existing checkpoint)")
+    parser.add_argument('--skip-gat', action='store_true',
+                        help="Skip GATv2 training (use existing checkpoint)")
     parser.add_argument('--skip-inference', action='store_true',
                         help="Skip DL inference step")
     parser.add_argument('--figures-only', action='store_true',
                         help="Only regenerate figures (skip all other steps)")
+    parser.add_argument('--gat-epochs', type=int, default=None,
+                        help="Training epochs for GATv2")
+    parser.add_argument('--gat-batch-size', type=int, default=None,
+                        help="Batch size for GATv2")
     parser.add_argument('--resume', type=str, default=None,
                         help="Path to checkpoint to resume training from")
 
@@ -255,6 +294,12 @@ Examples:
             batch_size=args.batch_size,
             skip=args.skip_train,
             resume=args.resume
+        )
+        step_2b_train_gat(
+            max_tiles=args.max_tiles,
+            epochs=args.gat_epochs,
+            batch_size=args.gat_batch_size,
+            skip=args.skip_gat,
         )
         step_3_inference(
             max_tiles=args.max_tiles,

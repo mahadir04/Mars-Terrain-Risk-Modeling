@@ -75,6 +75,26 @@ RANDOM_SEED = 42
 # Loss weights
 DICE_SMOOTH = 1.0        # Smoothing factor for Dice loss
 
+# ─────────────────────────── GATv2 Graph Model ─────────────────────────────
+# §5b  Graph Attention Network v2 for terrain risk estimation
+NODE_GRID_SIZE = 32          # Divide 512×512 tile into 32×32 grid → 1024 nodes
+GAT_INPUT_DIM = 6            # Node features: [slope, roughness, depth, intensity, x, y]
+GAT_HIDDEN_DIM = 64          # Hidden channels per attention head
+GAT_OUTPUT_DIM = 1           # Single risk score per node
+GAT_NUM_HEADS = 4            # Multi-head attention heads
+GAT_NUM_LAYERS = 3           # Number of GATv2Conv layers
+GAT_DROPOUT = 0.2            # Dropout rate for attention and features
+GAT_LEARNING_RATE = 5e-4     # Learning rate for GAT training
+GAT_EPOCHS = 30              # Training epochs for GAT
+GAT_BATCH_SIZE = 32          # Graphs per batch (each tile = 1 graph)
+
+# GAT output directories
+GAT_CHECKPOINTS_DIR = OUTPUT_DIR / "gat_checkpoints"
+GAT_PREDICTIONS_DIR = OUTPUT_DIR / "gat_predictions"
+GAT_LOGS_DIR = OUTPUT_DIR / "gat_logs"
+for d in [GAT_CHECKPOINTS_DIR, GAT_PREDICTIONS_DIR, GAT_LOGS_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
+
 # ─────────────────────────── Heatmap Fusion ────────────────────────────────
 # §6  Fusion weight: H_final = α·H_learned + (1-α)·H_physics
 FUSION_ALPHA = 0.7

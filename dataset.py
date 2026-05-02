@@ -109,6 +109,8 @@ class MarsTerrainDataset(Dataset):
         - Random horizontal flip (50%)
         - Random vertical flip (50%)
         - Random rotation (0°, 90°, 180°, 270°)
+        - Random brightness shift (50%, applied only to image)
+        - Random contrast shift (50%, applied only to image)
         """
         # Random horizontal flip
         if random.random() > 0.5:
@@ -125,6 +127,16 @@ class MarsTerrainDataset(Dataset):
         if k > 0:
             image = torch.rot90(image, k, dims=[1, 2])
             label = torch.rot90(label, k, dims=[1, 2])
+            
+        # Random brightness (applied only to the image, not the risk label)
+        if random.random() > 0.5:
+            brightness_factor = random.uniform(0.8, 1.2)
+            image = TF.adjust_brightness(image, brightness_factor)
+            
+        # Random contrast (applied only to the image, not the risk label)
+        if random.random() > 0.5:
+            contrast_factor = random.uniform(0.8, 1.2)
+            image = TF.adjust_contrast(image, contrast_factor)
         
         return image, label
 
